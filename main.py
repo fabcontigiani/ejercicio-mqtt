@@ -1,6 +1,11 @@
 from settings import ssid, wifi_pw, server
 from mqtt_as import MQTTClient, config
 import asyncio
+import machine
+id = ""
+for b in machine.unique_id():
+  id += "{:02X}".format(b)
+print(f"ID: {id}")
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -28,11 +33,11 @@ async def main(client):
         await asyncio.sleep(5)
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
-        await client.publish('result', '{}'.format(n), qos = 1)
+        await client.publish(id, '{}'.format(n), qos = 1)
         n += 1
 
 config["queue_len"] = 1  # Use event interface with default queue size
-MQTTClient.DEBUG = True  # Optional: print diagnostic messages
+MQTTClient.DEBUG = True  # Optional: print diagnostic messages  # type: ignore 
 client = MQTTClient(config)
 try:
     asyncio.run(main(client))
