@@ -6,9 +6,15 @@ id = ""
 for b in machine.unique_id():
   id += "{:02X}".format(b)
 print(f"ID: {id}")
-import json
+import ujson as json
 import dht
 sensor = dht.DHT11(machine.Pin(15))
+
+datos = {
+    "setpoint": None,
+    "modo": None,
+    "rele": None,
+}
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -37,13 +43,11 @@ async def main(client):
         sensor.measure()
         print('publish', n)
         # If WiFi is down the following will pause for the duration.
-        datos = {
-            "temperatura": sensor.temperature(),
-            "humedad": sensor.humidity(),
-        }
-        datos = f"{json.dumps(datos)}"
-        print(datos)
-        await client.publish(id, datos, qos = 1)
+        datos["temperatura"] = sensor.temperature()
+        datos["humedad"] = sensor.humidity()
+        cadena = f"{json.dumps(datos)}"
+        print(cadena)
+        await client.publish(id, cadena, qos = 1)
         n += 1
 
 config["queue_len"] = 1  # Use event interface with default queue size
