@@ -13,8 +13,11 @@ sensor = dht.DHT11(machine.Pin(15))
 datos = {
     "setpoint": None,
     "modo": None,
+    "periodo": None,
     "rele": None,
 }
+
+parametros_no_volatiles = ("setpoint", "modo", "rele", "destello", "periodo")
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -25,13 +28,19 @@ async def messages(client):  # Respond to incoming messages
     # If MQTT V5is used this would read
     # async for topic, msg, retained, properties in client.queue:
     async for topic, msg, retained in client.queue:
-        print(topic.decode(), msg.decode(), retained)
+        # print(topic.decode(), msg.decode(), retained)
+        mensaje = json.loads(msg.decode())
+        for key, value in mensaje.items():
+            if (key in parametros_no_volatiles) and (topic.decode() == key): # TODO: arreglar verificacion topic == key
+                datos[key] = value
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
         await client.up.wait()  # Wait on an Event
         client.up.clear()
-        await client.subscribe('foo_topic', 1)  # renew subscriptions
+        # await client.subscribe(f"{id}/setpoint", 1)  # renew subscriptions
+        for parametro in parametros_no_volatiles:
+            await client.subscribe(f"{id}/{parametro}", 1)  # renew subscriptions
 
 async def main(client):
     await client.connect()
