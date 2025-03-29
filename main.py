@@ -55,13 +55,35 @@ async def messages(client):  # Respond to incoming messages
                 else:
                     datos[key] = value
                     
+
+                if key == "rele":
+                    try: 
+                        assert datos["modo"] == "manual"
+                        try:
+                            assert value in (0, 1)
+                            datos[key] = value # type: ignore
+                            output_pin.value(not value) # Activo en bajo
+                        except AssertionError:
+                            print("Valor de relé incorrecto")
+                    except AssertionError:
+                        print("Rele no está en modo manual")
+                else:
+                    datos[key] = value # type: ignore
+                    
                 try:
                     with open('savedata.json', 'w') as f:
                         json.dump({k: datos[k] for k in param_no_vol}, f)
                 except:
                     print("Error! No se pudo guardar")
 
+
             elif key == "destello":
+                try:
+                    assert isinstance(datos["periodo"], int)
+                    asyncio.create_task(destello(datos["periodo"]))
+                except AssertionError:
+                    print("Periodo de destello no configurado")
+
                 try:
                     assert isinstance(datos["periodo"], int)
                     asyncio.create_task(destello(datos["periodo"]))
@@ -91,11 +113,10 @@ async def main(client):
         await asyncio.sleep(5)
         sensor.measure()
 
+
         # If WiFi is down the following will pause for the duration.
         datos["temperatura"] = sensor.temperature()
         datos["humedad"] = sensor.humidity()
-        datos["temperatura"] = random.randint(10, 40) # type: ignore
-        datos["humedad"] = random.randint(40, 90) # type: ignore
 
         if datos["modo"] == "automatico":
             try:
