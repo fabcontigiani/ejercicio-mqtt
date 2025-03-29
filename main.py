@@ -19,6 +19,7 @@ datos = {
 
 param_no_vol = ("setpoint", "modo", "rele", "periodo")
 led = machine.Pin("LED", machine.Pin.OUT)
+output_pin = machine.Pin(22, machine.Pin.OUT, value=1) # Activo en bajo
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -36,16 +37,37 @@ async def messages(client):  # Respond to incoming messages
                 assert topic.decode() == id + "/" + key
             except AssertionError:
                 print("Topic no coincide con key")
+                continue
 
             if key in param_no_vol:
-                datos[key] = value
+
+                if key == "rele":
+                    try: 
+                        assert datos["modo"] == "manual"
+                        try:
+                            assert value in (0, 1)
+                            datos[key] = value # type: ignore
+                            output_pin.value(not value) # Activo en bajo
+                        except AssertionError:
+                            print("Valor de relé incorrecto")
+                    except AssertionError:
+                        print("Rele no está en modo manual")
+                else:
+                    datos[key] = value
+                    
                 try:
                     with open('savedata.json', 'w') as f:
                         json.dump({k: datos[k] for k in param_no_vol}, f)
                 except:
                     print("Error! No se pudo guardar")
+
             elif key == "destello":
-                asyncio.create_task(destello(2000))
+                try:
+                    assert isinstance(datos["periodo"], int)
+                    asyncio.create_task(destello(datos["periodo"]))
+                except AssertionError:
+                    print("Periodo de destello no configurado")
+
 
 async def destello(periodo_ms):
     led.on()
@@ -68,10 +90,25 @@ async def main(client):
     while True:
         await asyncio.sleep(5)
         sensor.measure()
-        print('publish', n)
+
         # If WiFi is down the following will pause for the duration.
         datos["temperatura"] = sensor.temperature()
         datos["humedad"] = sensor.humidity()
+        datos["temperatura"] = random.randint(10, 40) # type: ignore
+        datos["humedad"] = random.randint(40, 90) # type: ignore
+
+        if datos["modo"] == "automatico":
+            try:
+                assert isinstance(datos["setpoint"], int)
+                if datos["temperatura"] > datos["setpoint"]:
+                    datos["rele"] = 1 # type: ignore
+                else:
+                    datos["rele"] = 0 # type: ignore
+                output_pin.value(not datos["rele"]) # Activo en bajo
+            except AssertionError:
+                print("Relé en modo automatico pero setpoint no configurado")
+
+        print('publish', n)
         cadena = f"{json.dumps(datos)}"
         print(cadena)
         await client.publish(id, cadena, qos = 1)
