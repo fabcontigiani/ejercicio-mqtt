@@ -18,6 +18,7 @@ datos = {
 }
 
 param_no_vol = ("setpoint", "modo", "rele", "periodo")
+led = machine.Pin("LED", machine.Pin.OUT)
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -44,7 +45,12 @@ async def messages(client):  # Respond to incoming messages
                 except:
                     print("Error! No se pudo guardar")
             elif key == "destello":
-                print("Destellando...") # TODO: implementar destello
+                asyncio.create_task(destello(2000))
+
+async def destello(periodo_ms):
+    led.on()
+    await asyncio.sleep_ms(periodo_ms)
+    led.off()
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
