@@ -17,7 +17,7 @@ datos = {
     "rele": None,
 }
 
-parametros_no_volatiles = ("setpoint", "modo", "rele", "destello", "periodo")
+param_no_vol = ("setpoint", "modo", "rele", "periodo")
 
 # Local configuration
 config['ssid'] = ssid  # Optional on ESP8266
@@ -31,15 +31,27 @@ async def messages(client):  # Respond to incoming messages
         # print(topic.decode(), msg.decode(), retained)
         mensaje = json.loads(msg.decode())
         for key, value in mensaje.items():
-            if (key in parametros_no_volatiles) and (topic.decode() == key): # TODO: arreglar verificacion topic == key
+            try:
+                assert topic.decode() == id + "/" + key
+            except AssertionError:
+                print("Topic no coincide con key")
+
+            if key in param_no_vol:
                 datos[key] = value
+                try:
+                    with open('savedata.json', 'w') as f:
+                        json.dump({k: datos[k] for k in param_no_vol}, f)
+                except:
+                    print("Error! No se pudo guardar")
+            elif key == "destello":
+                print("Destellando...") # TODO: implementar destello
 
 async def up(client):  # Respond to connectivity being (re)established
     while True:
         await client.up.wait()  # Wait on an Event
         client.up.clear()
         # await client.subscribe(f"{id}/setpoint", 1)  # renew subscriptions
-        for parametro in parametros_no_volatiles:
+        for parametro in param_no_vol + ("destello",):
             await client.subscribe(f"{id}/{parametro}", 1)  # renew subscriptions
 
 async def main(client):
