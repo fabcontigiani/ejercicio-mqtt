@@ -13,7 +13,7 @@ sensor = dht.DHT11(machine.Pin(15))
 datos = {
     "setpoint": None,
     "modo": None,
-    "periodo": None,
+    "periodo": 5,
     "rele": None,
 }
 
@@ -78,22 +78,16 @@ async def messages(client):  # Respond to incoming messages
 
 
             elif key == "destello":
-                try:
-                    assert isinstance(datos["periodo"], int)
-                    asyncio.create_task(destello(datos["periodo"]))
-                except AssertionError:
-                    print("Periodo de destello no configurado")
+                asyncio.create_task(destello())
 
-                try:
-                    assert isinstance(datos["periodo"], int)
-                    asyncio.create_task(destello(datos["periodo"]))
-                except AssertionError:
-                    print("Periodo de destello no configurado")
+async def medir():
+    sensor.measure()
+    datos["temperatura"] = sensor.temperature()
+    datos["humedad"] = sensor.humidity()
 
-
-async def destello(periodo_ms):
+async def destello():
     led.on()
-    await asyncio.sleep_ms(periodo_ms)
+    await asyncio.sleep(2)
     led.off()
 
 async def up(client):  # Respond to connectivity being (re)established
@@ -110,13 +104,8 @@ async def main(client):
         asyncio.create_task(coroutine(client))
     n = 0
     while True:
-        await asyncio.sleep(5)
-        sensor.measure()
-
-
-        # If WiFi is down the following will pause for the duration.
-        datos["temperatura"] = sensor.temperature()
-        datos["humedad"] = sensor.humidity()
+        await asyncio.sleep(datos["periodo"])
+        asyncio.create_task(medir())
 
         if datos["modo"] == "automatico":
             try:
