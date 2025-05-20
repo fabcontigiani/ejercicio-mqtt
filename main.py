@@ -1,4 +1,4 @@
-from settings import ssid, wifi_pw, server
+from settings import ssid, wifi_pw, server, server_user, server_pw, port
 from mqtt_as import MQTTClient, config
 import asyncio
 import machine
@@ -7,8 +7,13 @@ for b in machine.unique_id():
   id += "{:02X}".format(b)
 print(f"ID: {id}")
 import ujson as json
-import dht
-sensor = dht.DHT11(machine.Pin(15))
+import random
+random.seed(2025)
+# import dht
+# sensor = dht.DHT11(machine.Pin(15))
+
+temperatura = 25.0
+humedad = 50.0
 
 datos = {
     "setpoint": None,
@@ -25,6 +30,12 @@ output_pin = machine.Pin(22, machine.Pin.OUT, value=1) # Activo en bajo
 config['ssid'] = ssid  # Optional on ESP8266
 config['wifi_pw'] = wifi_pw
 config['server'] = server  # Change to suit e.g. 'iot.eclipse.org'
+config['port'] = port
+config['user'] = 'my_username'
+config['password'] = 'my_password'
+config['ssl'] = True
+config['user'] = server_user
+config['password'] = server_pw
 
 async def messages(client):  # Respond to incoming messages
     # If MQTT V5is used this would read
@@ -55,21 +66,6 @@ async def messages(client):  # Respond to incoming messages
                 else:
                     datos[key] = value
                     
-
-                if key == "rele":
-                    try: 
-                        assert datos["modo"] == "manual"
-                        try:
-                            assert value in (0, 1)
-                            datos[key] = value # type: ignore
-                            output_pin.value(not value) # Activo en bajo
-                        except AssertionError:
-                            print("Valor de relé incorrecto")
-                    except AssertionError:
-                        print("Rele no está en modo manual")
-                else:
-                    datos[key] = value # type: ignore
-                    
                 try:
                     with open('savedata.json', 'w') as f:
                         json.dump({k: datos[k] for k in param_no_vol}, f)
@@ -81,9 +77,9 @@ async def messages(client):  # Respond to incoming messages
                 asyncio.create_task(destello())
 
 async def medir():
-    sensor.measure()
-    datos["temperatura"] = sensor.temperature()
-    datos["humedad"] = sensor.humidity()
+    # sensor.measure()
+    datos["temperatura"] = temperatura + random.uniform(-0.5, 0.5)
+    datos["humedad"] = humedad + random.uniform(-0.5, 0.5)
 
 async def destello():
     led.on()
