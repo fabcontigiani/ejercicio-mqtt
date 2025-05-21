@@ -117,7 +117,7 @@ async def main(client):
         print('publish', n)
         cadena = f"{json.dumps(datos)}"
         print(cadena)
-        await client.publish(id, cadena, qos = 1)
+        await client.publish("mediciones/fc/" + id, cadena, qos = 1)
         n += 1
 
 config["queue_len"] = 1  # Use event interface with default queue size
