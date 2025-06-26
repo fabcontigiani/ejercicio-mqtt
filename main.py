@@ -18,7 +18,7 @@ humedad = 50.0
 datos = {
     "setpoint": None,
     "modo": None,
-    "periodo": 5,
+    "periodo": 60,
     "rele": None,
 }
 
