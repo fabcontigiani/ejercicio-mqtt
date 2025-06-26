@@ -76,10 +76,31 @@ async def messages(client):  # Respond to incoming messages
             elif key == "destello":
                 asyncio.create_task(destello())
 
+            elif key == "led":
+                if value in (0, 1):
+                    if value == 1:
+                        led.on()
+                        await client.publish(f"{id}/estado", '{"estado":1}', qos=1)
+                        print("Led encendido")
+                    else:
+                        led.off()
+                        await client.publish(f"{id}/estado", '{"estado":0}', qos=1)
+                        print("Led apagado")
+                else:
+                    print("Valor de led incorrecto")
+
 async def medir():
     # sensor.measure()
-    datos["temperatura"] = temperatura + random.uniform(-0.5, 0.5)
-    datos["humedad"] = humedad + random.uniform(-0.5, 0.5)
+    new_temp = round(temperatura + random.uniform(-3, 3), 2)
+    if new_temp < 0 or new_temp > 50:
+        new_temp = 25.0
+
+    new_hum = round(humedad + random.uniform(-3, 3), 2)
+    if new_hum < 0 or new_hum > 100:
+        new_hum = 50.0
+
+    datos["temperatura"] = new_temp
+    datos["humedad"] = new_hum
 
 async def destello():
     led.on()
@@ -91,7 +112,7 @@ async def up(client):  # Respond to connectivity being (re)established
         await client.up.wait()  # Wait on an Event
         client.up.clear()
         # await client.subscribe(f"{id}/setpoint", 1)  # renew subscriptions
-        for parametro in param_no_vol + ("destello",):
+        for parametro in param_no_vol + ("destello", "led"):
             await client.subscribe(f"{id}/{parametro}", 1)  # renew subscriptions
 
 async def main(client):
